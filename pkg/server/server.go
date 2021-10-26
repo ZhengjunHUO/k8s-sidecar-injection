@@ -1,8 +1,14 @@
 package server
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
+
 	"net/http"
+	"fmt"
 	"log"
+	"context"
 )
 
 type MuteServer struct {
@@ -21,16 +27,32 @@ func ServerInit() *MuteServer {
 	}
 }
 
-func (s *MuteServer) Start() {
-	if err := s.HttpServer.ListenAndServeTLS("/ssl/server.crt", "/ssl/server.key"); err != http.ErrServerClosed {
-		log.Printf("Error bringing up the server: %v\n", err)
+func (s *MuteServer) Run() {
+	waitTillAllClosed := make(chan struct{})
+	go s.SetInterruptHandler(waitTillAllClosed)
+
+	if err := s.HttpServer.ListenAndServeTLS("server.crt", "server.key"); err != http.ErrServerClosed {
+		log.Printf("[ERROR] Error bringing up the server: %v\n", err)
 	}
+
+	<-waitTillAllClosed
 }
 
-func (s *MuteServer) Stop() {
+func (s *MuteServer) SetInterruptHandler(waitTillAllClosed chan struct{}) {
+	chInt := make(chan os.Signal, 1)
+	signal.Notify(chInt, os.Interrupt, syscall.SIGTERM)
 
+	<-chInt
+	log.Println("[INFO] Receive interrupt signal, stop server ...")
+
+	if err := s.HttpServer.Shutdown(context.Background()); err != nil {
+		log.Printf("[ERROR] Error shutting server down: %v", err)
+	}
+
+	log.Println("[INFO] Server has been gracefully shut down !")
+	close(waitTillAllClosed)
 }
 
 func muteHandler(w http.ResponseWriter, r *http.Request) {
-
+	fmt.Fprintf(w, "mutation handler to implement")
 }
