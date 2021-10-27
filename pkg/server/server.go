@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"io"
 
 	"net/http"
 	"fmt"
@@ -54,5 +55,26 @@ func (s *MuteServer) SetInterruptHandler(waitTillAllClosed chan struct{}) {
 }
 
 func muteHandler(w http.ResponseWriter, r *http.Request) {
+	// 1) read request's body into buffer
+	buf, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// defer r.Body.Close()
+
+	// 2) check body's content
+	if len(buf) == 0 {
+		log.Println("Empty body!")
+		http.Error(w, "Empty body", http.StatusBadRequest)
+		return
+	}
+
+	ct := r.Header.Get("Content-Type")
+	if ct != "application/json" {
+		log.Printf("Need application/json, receive: %s\n", ct)
+		http.Error(w, "Expect application/json data", http.StatusBadRequest)
+		return
+	}
+
 	fmt.Fprintf(w, "mutation handler to implement")
 }
