@@ -5,12 +5,17 @@ import (
 	"os/signal"
 	"syscall"
 	"io"
-
 	"net/http"
 	"fmt"
 	"log"
 	"context"
+
+	admv1beta1 "k8s.io/api/admission/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
+
+var Scheme = runtime.NewScheme()
 
 type MuteServer struct {
 	HttpServer	*http.Server
@@ -32,6 +37,7 @@ func (s *MuteServer) Run() {
 	waitTillAllClosed := make(chan struct{})
 	go s.SetInterruptHandler(waitTillAllClosed)
 
+	log.Println("[Info] Starting server ...")
 	if err := s.HttpServer.ListenAndServeTLS("server.crt", "server.key"); err != http.ErrServerClosed {
 		log.Printf("[ERROR] Error bringing up the server: %v\n", err)
 	}
@@ -71,8 +77,18 @@ func muteHandler(w http.ResponseWriter, r *http.Request) {
 
 	ct := r.Header.Get("Content-Type")
 	if ct != "application/json" {
-		log.Printf("Need application/json, receive: %s\n", ct)
-		http.Error(w, "Expect application/json data", http.StatusBadRequest)
+		log.Printf("Need application/json type, received type: %s\n", ct)
+		http.Error(w, "Expect application/json type data", http.StatusBadRequest)
+		return
+	}
+
+	// 3) decode to AdmissionReview
+	review := &admv1beta1.AdmissionReview{}
+	decoder := serializer.NewCodecFactory(Scheme).UniversalDeserializer()
+	_, _, err = decoder.Decode(buf, nil, review)
+	if err != nil {
+		log.Printf("Decode body to admissionreview failed: %s\n", err)
+		http.Error(w, "Json content malformed", http.StatusBadRequest)
 		return
 	}
 
