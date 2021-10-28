@@ -6,13 +6,13 @@ import (
 	"syscall"
 	"io"
 	"net/http"
-	"fmt"
 	"log"
 	"context"
 
 	admv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/json"
 )
 
 var Scheme = runtime.NewScheme()
@@ -60,6 +60,10 @@ func (s *MuteServer) SetInterruptHandler(waitTillAllClosed chan struct{}) {
 	close(waitTillAllClosed)
 }
 
+func updateReview(review *admv1beta1.AdmissionReview) {
+	log.Println("mutation handler to implement")
+}
+
 func muteHandler(w http.ResponseWriter, r *http.Request) {
 	// 1) read request's body into buffer
 	buf, err := io.ReadAll(r.Body)
@@ -92,5 +96,19 @@ func muteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "mutation handler to implement")
+	// 4) handle AdmissionReview
+	updateReview(review)
+
+	// 5) Prepare response
+	rspbuf, err := json.Marshal(review)
+	if err != nil {
+		log.Printf("Serialize admissionreview failed: %s\n", err)
+		http.Error(w, "Prepare response failed", http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := w.Write(rspbuf); err != nil {
+		log.Printf("Serialize admissionreview failed: %s\n", err)
+		http.Error(w, "Prepare response failed", http.StatusInternalServerError)
+	}
 }
