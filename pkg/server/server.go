@@ -10,6 +10,7 @@ import (
 	"context"
 
 	admv1beta1 "k8s.io/api/admission/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -37,7 +38,7 @@ func (s *MuteServer) Run() {
 	waitTillAllClosed := make(chan struct{})
 	go s.SetInterruptHandler(waitTillAllClosed)
 
-	log.Println("[Info] Starting server ...")
+	log.Println("[INFO] Starting server ...")
 	if err := s.HttpServer.ListenAndServeTLS("server.crt", "server.key"); err != http.ErrServerClosed {
 		log.Printf("[ERROR] Error bringing up the server: %v\n", err)
 	}
@@ -61,6 +62,19 @@ func (s *MuteServer) SetInterruptHandler(waitTillAllClosed chan struct{}) {
 }
 
 func updateReview(review *admv1beta1.AdmissionReview) {
+	var pod corev1.Pod
+	if err := json.Unmarshal(review.Request.Object.Raw, &pod); err != nil {
+		log.Printf("[ERROR] Dump req's object failed: %s\n", err)
+		return
+	}
+
+	// check if annotations match the injection criteria
+	annos := pod.ObjectMeta.Annotations
+	if annos == nil || annos["sidecar.huozj.io/injected"] == "true" || annos["sidecar.huozj.io/inject"] != "true" {
+		log.Println("[INFO] Skip sidecar injection!")
+		return
+	}
+
 	log.Println("mutation handler to implement")
 }
 
@@ -74,14 +88,14 @@ func muteHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 2) check body's content
 	if len(buf) == 0 {
-		log.Println("Empty body!")
+		log.Println("[WARN] Empty body!")
 		http.Error(w, "Empty body", http.StatusBadRequest)
 		return
 	}
 
 	ct := r.Header.Get("Content-Type")
 	if ct != "application/json" {
-		log.Printf("Need application/json type, received type: %s\n", ct)
+		log.Printf("[WARN] Need application/json type, received type: %s\n", ct)
 		http.Error(w, "Expect application/json type data", http.StatusBadRequest)
 		return
 	}
@@ -91,7 +105,7 @@ func muteHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := serializer.NewCodecFactory(Scheme).UniversalDeserializer()
 	_, _, err = decoder.Decode(buf, nil, review)
 	if err != nil {
-		log.Printf("Decode body to admissionreview failed: %s\n", err)
+		log.Printf("[WARN] Decode body to admissionreview failed: %s\n", err)
 		http.Error(w, "Json content malformed", http.StatusBadRequest)
 		return
 	}
@@ -102,13 +116,13 @@ func muteHandler(w http.ResponseWriter, r *http.Request) {
 	// 5) Prepare response
 	rspbuf, err := json.Marshal(review)
 	if err != nil {
-		log.Printf("Serialize admissionreview failed: %s\n", err)
+		log.Printf("[ERROR] Serialize admissionreview failed: %s\n", err)
 		http.Error(w, "Prepare response failed", http.StatusInternalServerError)
 		return
 	}
 
 	if _, err := w.Write(rspbuf); err != nil {
-		log.Printf("Serialize admissionreview failed: %s\n", err)
+		log.Printf("[ERROR] Serialize admissionreview failed: %s\n", err)
 		http.Error(w, "Prepare response failed", http.StatusInternalServerError)
 	}
 }
