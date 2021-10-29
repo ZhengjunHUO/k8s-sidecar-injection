@@ -14,12 +14,36 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
-
-var Scheme = runtime.NewScheme()
 
 type MuteServer struct {
 	HttpServer	*http.Server
+}
+
+type Sidecar_t struct {
+	Containers []corev1.Container `yaml:"containers"`
+	Volumes    []corev1.Volume    `yaml:"volumes"`
+}
+
+var Sidecarspec Sidecar_t
+
+var Scheme = runtime.NewScheme()
+
+func init() {
+	fd, err := os.Open("sidecarspec.yaml")
+	if err != nil {
+		log.Fatalf("[ERROR] Open sidecar spec yaml: %s\n", err)
+	}
+
+	buf, err := io.ReadAll(fd)
+	if err != nil {
+		log.Fatalf("[ERROR] Read sidecar spec yaml: %s\n", err)
+	}
+
+	if err = yaml.Unmarshal(buf, &Sidecarspec); err != nil {
+		log.Fatalf("[ERROR] Deserialize sidecar spec yaml: %s\n", err)
+	}
 }
 
 func ServerInit() *MuteServer {
