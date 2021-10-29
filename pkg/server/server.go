@@ -17,8 +17,19 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
+const (
+	INJECT_LABEL = "sidecar.huozj.io/inject"
+	INJECT_STATUS = "sidecar.huozj.io/injected"
+)
+
 type MuteServer struct {
 	HttpServer	*http.Server
+}
+
+type Patch_t struct {
+	Op    string      `json:"op"`
+	Path  string      `json:"path"`
+	Value interface{} `json:"value,omitempty"`
 }
 
 type Sidecar_t struct {
@@ -94,10 +105,55 @@ func updateReview(review *admv1beta1.AdmissionReview) {
 
 	// check if annotations match the injection criteria
 	annos := pod.ObjectMeta.Annotations
-	if annos == nil || annos["sidecar.huozj.io/injected"] == "true" || annos["sidecar.huozj.io/inject"] != "true" {
+	if annos == nil || annos[INJECT_STATUS] == "true" || annos[INJECT_LABEL] != "true" {
 		log.Println("[INFO] Skip sidecar injection!")
 		return
 	}
+
+	patch := []Patch_t{}
+
+	CntPath, VolPath := "/spec/containers", "/spec/volumes"
+	CntPathAppend, VolPathAppend := "/spec/containers/-", "/spec/volumes/-"
+	hasContainer := len(pod.Spec.Containers) != 0
+	hasVolume := len(pod.Spec.Volumes) != 0
+
+	// patch sidecar container(s)
+	for i := range Sidecarspec.Containers {
+		if hasContainer {
+			patch = append(patch, Patch_t{Op: "add", Path: CntPathAppend, Value: Sidecarspec.Containers[i],})
+		}else{
+			patch = append(patch, Patch_t{Op: "add", Path: CntPath, Value: []corev1.Container{Sidecarspec.Containers[i]},})
+			hasContainer = false
+		}
+	}
+
+	// patch sidecar volume(s)
+	for i := range Sidecarspec.Volumes {
+		if hasVolume {
+			patch = append(patch, Patch_t{Op: "add", Path: VolPathAppend, Value: Sidecarspec.Volumes[i],})
+		}else{
+			patch = append(patch, Patch_t{Op: "add", Path: VolPath, Value: []corev1.Volume{Sidecarspec.Volumes[i]},})
+			hasVolume = false
+		}
+	}
+
+	// patch annotation
+	if annos[INJECT_STATUS] == "" {
+		patch = append(patch, Patch_t{Op: "add", Path: "/metadata/annotations/-", Value: map[string]string{ INJECT_STATUS: "true", },})
+	}else{
+		patch = append(patch, Patch_t{Op: "replace", Path: "/metadata/annotations/"+INJECT_STATUS, Value: "true",})
+	}
+
+	// serialize patch
+	patchbuf, err := json.Marshal(patch)
+	if err != nil {
+		log.Printf("[ERROR] Serialization patch: %s\n", err)
+		return
+	}
+
+	// write response
+	var patchtype admv1beta1.PatchType = "JSONPatch"
+	review.Response = &admv1beta1.AdmissionResponse{ UID: review.Request.UID, Allowed: true, Patch: patchbuf, PatchType: &patchtype, }
 
 	log.Println("mutation handler to implement")
 }
