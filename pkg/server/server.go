@@ -20,6 +20,10 @@ import (
 const (
 	INJECT_LABEL = "sidecar.huozj.io/inject"
 	INJECT_STATUS = "sidecar.huozj.io/injected"
+	CNTPATH = "/spec/containers"
+	VOLPATH = "/spec/volumes"
+	CNTPATHAPPEND = "/spec/containers/-"
+	VOLPATHAPPEND = "/spec/volumes/-"
 )
 
 type MuteServer struct {
@@ -71,7 +75,7 @@ func ServerInit() *MuteServer {
 
 func (s *MuteServer) Run() {
 	waitTillAllClosed := make(chan struct{})
-	go s.SetInterruptHandler(waitTillAllClosed)
+	go s.setInterruptHandler(waitTillAllClosed)
 
 	log.Println("[INFO] Starting server ...")
 	if err := s.HttpServer.ListenAndServeTLS("server.crt", "server.key"); err != http.ErrServerClosed {
@@ -81,7 +85,7 @@ func (s *MuteServer) Run() {
 	<-waitTillAllClosed
 }
 
-func (s *MuteServer) SetInterruptHandler(waitTillAllClosed chan struct{}) {
+func (s *MuteServer) setInterruptHandler(waitTillAllClosed chan struct{}) {
 	chInt := make(chan os.Signal, 1)
 	signal.Notify(chInt, os.Interrupt, syscall.SIGTERM)
 
@@ -112,17 +116,15 @@ func updateReview(review *admv1beta1.AdmissionReview) {
 
 	patch := []Patch_t{}
 
-	CntPath, VolPath := "/spec/containers", "/spec/volumes"
-	CntPathAppend, VolPathAppend := "/spec/containers/-", "/spec/volumes/-"
 	hasContainer := len(pod.Spec.Containers) != 0
 	hasVolume := len(pod.Spec.Volumes) != 0
 
 	// patch sidecar container(s)
 	for i := range Sidecarspec.Containers {
 		if hasContainer {
-			patch = append(patch, Patch_t{Op: "add", Path: CntPathAppend, Value: Sidecarspec.Containers[i],})
+			patch = append(patch, Patch_t{Op: "add", Path: CNTPATHAPPEND, Value: Sidecarspec.Containers[i],})
 		}else{
-			patch = append(patch, Patch_t{Op: "add", Path: CntPath, Value: []corev1.Container{Sidecarspec.Containers[i]},})
+			patch = append(patch, Patch_t{Op: "add", Path: CNTPATH, Value: []corev1.Container{Sidecarspec.Containers[i]},})
 			hasContainer = false
 		}
 	}
@@ -130,9 +132,9 @@ func updateReview(review *admv1beta1.AdmissionReview) {
 	// patch sidecar volume(s)
 	for i := range Sidecarspec.Volumes {
 		if hasVolume {
-			patch = append(patch, Patch_t{Op: "add", Path: VolPathAppend, Value: Sidecarspec.Volumes[i],})
+			patch = append(patch, Patch_t{Op: "add", Path: VOLPATHAPPEND, Value: Sidecarspec.Volumes[i],})
 		}else{
-			patch = append(patch, Patch_t{Op: "add", Path: VolPath, Value: []corev1.Volume{Sidecarspec.Volumes[i]},})
+			patch = append(patch, Patch_t{Op: "add", Path: VOLPATH, Value: []corev1.Volume{Sidecarspec.Volumes[i]},})
 			hasVolume = false
 		}
 	}
