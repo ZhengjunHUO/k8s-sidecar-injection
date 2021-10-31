@@ -12,6 +12,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
+
+	"github.com/ZhengjunHUO/k8s-sidecar-injection/pkg/config"
 )
 
 const (
@@ -43,7 +45,7 @@ var Sidecarspec Sidecar_t
 var Scheme = runtime.NewScheme()
 
 func init() {
-	fd, err := os.Open("sidecarspec.yaml")
+	fd, err := os.Open(config.Cfg.SidecarSpec)
 	if err != nil {
 		log.Fatalf("[ERROR] Open sidecar spec yaml: %s\n", err)
 	}
@@ -75,7 +77,7 @@ func (s *MuteServer) Run() {
 	go s.setInterruptHandler(waitTillAllClosed)
 
 	log.Println("[INFO] Starting server ...")
-	if err := s.HttpServer.ListenAndServeTLS("server.crt", "server.key"); err != http.ErrServerClosed {
+	if err := s.HttpServer.ListenAndServeTLS(config.Cfg.ServerCert, config.Cfg.ServerKey); err != http.ErrServerClosed {
 		log.Printf("[ERROR] Error bringing up the server: %v\n", err)
 	}
 
