@@ -1,0 +1,21 @@
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: sidecar-injection-webhook
+webhooks:
+- name: sidecar.huozj.io
+  clientConfig:
+    caBundle: ${CA_PLACEHOLDER}
+    service:
+      name: sidecar-injection-svc
+      namespace: sidecar-injection
+      path: "/mutate"
+      port: 443
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+    operations: ["CREATE", "UPDATE"]
+  namespaceSelector:
+    matchLabels:
+      huozj-injection: enabled
