@@ -10,7 +10,6 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/ZhengjunHUO/k8s-sidecar-injection/pkg/config"
@@ -41,8 +40,6 @@ type Sidecar_t struct {
 }
 
 var Sidecarspec Sidecar_t
-
-var Scheme = runtime.NewScheme()
 
 func init() {
 	fd, err := os.Open(config.Cfg.SidecarSpec)

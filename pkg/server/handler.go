@@ -7,6 +7,7 @@ import (
 
 	admv1beta1 "k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/json"
 )
@@ -95,7 +96,7 @@ func muteHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 3) decode to AdmissionReview
 	review := &admv1beta1.AdmissionReview{}
-	decoder := serializer.NewCodecFactory(Scheme).UniversalDeserializer()
+	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer()
 	_, _, err = decoder.Decode(buf, nil, review)
 	if err != nil {
 		log.Printf("[WARN] Decode body to admissionreview failed: %s\n", err)
