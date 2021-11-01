@@ -7,7 +7,7 @@ webhooks:
   clientConfig:
     caBundle: ${CA_PLACEHOLDER}
     service:
-      name: sidecar-injection-svc
+      name: sidecar-svc
       namespace: sidecar-injection
       path: "/mutate"
       port: 443

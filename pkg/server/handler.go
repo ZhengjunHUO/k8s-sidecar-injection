@@ -69,7 +69,7 @@ func updateReview(review *admv1beta1.AdmissionReview) {
 	var patchtype admv1beta1.PatchType = "JSONPatch"
 	review.Response = &admv1beta1.AdmissionResponse{ UID: review.Request.UID, Allowed: true, Patch: patchbuf, PatchType: &patchtype, }
 
-	log.Println("mutation handler to implement")
+	log.Println("[INFO] AdmissionReview's response prepared.")
 }
 
 func muteHandler(w http.ResponseWriter, r *http.Request) {
@@ -119,4 +119,6 @@ func muteHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[ERROR] Serialize admissionreview failed: %s\n", err)
 		http.Error(w, "Prepare response failed", http.StatusInternalServerError)
 	}
+
+	log.Println("[INFO] AdmissionReview's response sent back.")
 }
