@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sidecar-deploy
+  namespace: sidecar-injection
+  labels:
+    app: sidecar-injection
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sidecar-injection
+  template:
+    metadata:
+      labels:
+        app: sidecar-injection
+    spec:
+      containers:
+        - name: sidecar-injection
+          image: <REPO/OF/YOUR/IMAGE:TAG>
+          imagePullPolicy: IfNotPresent
+          args:
+          - -cert=/etc/tls/server.crt
+          - -key=/etc/tls/server.key
+          - -spec=/etc/sidecar/sidecarspec.yaml
+          volumeMounts:
+          - name: tls-sc
+            mountPath: /etc/tls
+            readOnly: true
+          - name: sidecar-spec
+            mountPath: /etc/sidecar/sidecarspec.yaml
+            subPath: sidecarspec.yaml
+      imagePullSecrets:
+        - name: regcred
+      volumes:
+      - name: tls-sc
+        secret:
+          secretName: sidecar-tls
+      - name: sidecar-spec
+        configMap:
+          name: sidecar-cm
