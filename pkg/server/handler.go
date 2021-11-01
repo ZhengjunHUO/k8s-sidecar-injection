@@ -20,7 +20,7 @@ func updateReview(review *admv1beta1.AdmissionReview) {
 	}
 
 	// check if annotations match the injection criteria
-	annos := pod.ObjectMeta.Annotations
+	annos := pod.ObjectMeta.GetAnnotations()
 	if annos == nil || annos[INJECT_STATUS] == "true" || annos[INJECT_LABEL] != "true" {
 		log.Println("[INFO] Skip sidecar injection!")
 		return
@@ -53,9 +53,9 @@ func updateReview(review *admv1beta1.AdmissionReview) {
 
 	// patch annotation
 	if annos[INJECT_STATUS] == "" {
-		patch = append(patch, Patch_t{Op: "add", Path: "/metadata/annotations/-", Value: map[string]string{ INJECT_STATUS: "true", },})
+		patch = append(patch, Patch_t{Op: "add", Path: "/metadata/annotations/"+INJECT_STATUS_PATH, Value: "true",})
 	}else{
-		patch = append(patch, Patch_t{Op: "replace", Path: "/metadata/annotations/"+INJECT_STATUS, Value: "true",})
+		patch = append(patch, Patch_t{Op: "replace", Path: "/metadata/annotations/"+INJECT_STATUS_PATH, Value: "true",})
 	}
 
 	// serialize patch

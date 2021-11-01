@@ -18,6 +18,7 @@ import (
 const (
 	INJECT_LABEL = "sidecar.huozj.io/inject"
 	INJECT_STATUS = "sidecar.huozj.io/injected"
+	INJECT_STATUS_PATH = "sidecar.huozj.io~1injected"
 	CNTPATH = "/spec/containers"
 	VOLPATH = "/spec/volumes"
 	CNTPATHAPPEND = "/spec/containers/-"
