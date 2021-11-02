@@ -25,16 +25,19 @@ const (
 	VOLPATHAPPEND = "/spec/volumes/-"
 )
 
+// http server to execute mutating operation
 type MuteServer struct {
 	HttpServer	*http.Server
 }
 
+// JSON patch struct
 type Patch_t struct {
 	Op    string      `json:"op"`
 	Path  string      `json:"path"`
 	Value interface{} `json:"value,omitempty"`
 }
 
+// sidecar to inject
 type Sidecar_t struct {
 	Containers []corev1.Container `yaml:"containers"`
 	Volumes    []corev1.Volume    `yaml:"volumes"`
@@ -43,6 +46,7 @@ type Sidecar_t struct {
 var Sidecarspec Sidecar_t
 
 func init() {
+	// Get sidecar's configuration
 	fd, err := os.Open(config.Cfg.SidecarSpec)
 	if err != nil {
 		log.Fatalf("[ERROR] Open sidecar spec yaml: %s\n", err)
@@ -59,6 +63,7 @@ func init() {
 }
 
 func ServerInit() *MuteServer {
+	// register handler to a http server
 	smux := http.NewServeMux()
 	smux.HandleFunc("/mutate", muteHandler)
 
@@ -71,14 +76,17 @@ func ServerInit() *MuteServer {
 }
 
 func (s *MuteServer) Run() {
+	// trap interrupt signal in a goroutine
 	waitTillAllClosed := make(chan struct{})
 	go s.setInterruptHandler(waitTillAllClosed)
 
+	// run the server with TLS, the certificate need to be issued by the k8s' CA
 	log.Println("[INFO] Starting server ...")
 	if err := s.HttpServer.ListenAndServeTLS(config.Cfg.ServerCert, config.Cfg.ServerKey); err != http.ErrServerClosed {
 		log.Printf("[ERROR] Error bringing up the server: %v\n", err)
 	}
 
+	// shut down the server gracefully
 	<-waitTillAllClosed
 }
 
