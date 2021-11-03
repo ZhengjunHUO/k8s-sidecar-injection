@@ -1,11 +1,12 @@
-# k8s-sidecar-injection
+# Kubernetes mutating admission webhook - Inject a sidecar to pod
 An instance of kubernetes mutating admission webhook, allowing to inject a sidecar to a pod with specific annotation in labelled namespaces. 
 Can be easily expanded to other mutating usages by modifying:
 ```
 func updateReview(review *admv1beta1.AdmissionReview) 
 ```
-in pkg/server/handler.go 
+in pkg/server/handler.go
 
+## Environment
 - Code written in Go 1.17
 - Deployed on kubernetes 1.17.9
 
