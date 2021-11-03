@@ -24,7 +24,16 @@ kubectl -n sidecar-injection create secret generic regcred --from-file=.dockerco
 ```
 
 ### 2a) Issue server's cert via k8s' CA, for apiserver
-TODO
+```bash
+# Apply a csr to k8s
+make
+# Issue the cert with k8s
+kubectl certificate approve sidecar-svc-csr
+# Save the cert to file
+echo $(kubectl get csr sidecar-svc-csr -o jsonpath='{.status.certificate}') | base64 -d > cert/server.crt
+# Create cert in target namespace
+kubectl create secret generic sidecar-tls --from-file=server.key=cert/server.key --from-file=server.crt=cert/server.crt --dry-run=client -o yaml | kubectl -n sidecar-injection apply -f -
+```
 
 ### 2b) Inject k8s CA's cabundle to server, for mutual authentication use 
 ```bash
