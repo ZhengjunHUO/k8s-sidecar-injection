@@ -7,10 +7,16 @@ func updateReview(review *admv1beta1.AdmissionReview)
 in pkg/server/handler.go
 
 ## Injection Policy
-| # | Title | Tags | 描述 |
-| Resource | Label | Enabled value |
-| Namespace | istio-injection | enabled |
-| Pod | sidecar.istio.io/inject | "true" |
+The sidecar get injected in the pod with special annotation under the labeled namespace.
+| Resource | Label/Annotation | Enabled value |
+| ---- | ---- | ---- |
+| Namespace | huozj-injection | enabled |
+| Pod | sidecar.huozj.io/inject | "true" |
+
+After a successful injection, the pod will receive a new annotation:
+```
+sidecar.huozj.io/injected: "true"
+```
 
 ## Environment
 - Code written in Go 1.17
