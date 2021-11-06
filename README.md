@@ -6,6 +6,12 @@ func updateReview(review *admv1beta1.AdmissionReview)
 ```
 in pkg/server/handler.go
 
+## Injection Policy
+| # | Title | Tags | 描述 |
+| Resource | Label | Enabled value |
+| Namespace | istio-injection | enabled |
+| Pod | sidecar.istio.io/inject | "true" |
+
 ## Environment
 - Code written in Go 1.17
 - Deployed on kubernetes 1.17.9
